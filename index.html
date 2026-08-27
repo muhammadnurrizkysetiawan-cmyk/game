@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>Adventure Jump</title>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+
+body{
+  overflow:hidden;
+  background:#111;
+  touch-action:none;
+  font-family:Arial,sans-serif;
+}
+
+canvas{
+  width:100vw;
+  height:100vh;
+  display:block;
+}
+
+.controls{
+  position:fixed;
+  bottom:20px;
+  left:0;
+  width:100%;
+  display:flex;
+  justify-content:space-between;
+  padding:0 20px;
+  pointer-events:none;
+}
+
+.left{
+  display:flex;
+  gap:12px;
+}
+
+button{
+  width:65px;
+  height:65px;
+  border:0;
+  border-radius:50%;
+  background:rgba(255,255,255,.35);
+  color:white;
+  font-size:28px;
+  font-weight:bold;
+  pointer-events:auto;
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="game"></canvas>
+
+<div class="controls">
+  <div class="left">
+    <button id="left">◀</button>
+    <button id="right">▶</button>
+  </div>
+  <button id="jump">▲</button>
+</div>
+
+<script>
+
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+
+canvas.width=1000;
+canvas.height=600;
+
+let stage=1;
+let score=0;
+let lives=3;
+let cameraX=0;
+let gameOver=false;
+let won=false;
+
+const player={
+  x:100,
+  y:400,
+  w:40,
+  h:55,
+  vx:0,
+  vy:0,
+  speed:5,
+  jump:13,
+  grounded:false
+};
+
+let platforms=[];
+let coins=[];
+let enemies=[];
+let finishX=0;
+
+const keys={
+  left:false,
+  right:false
+};
+
+/* =========================
+   MEMBUAT STAGE
+========================= */
+
+function createStage(){
+
+  platforms=[];
+  coins=[];
+  enemies=[];
+
+  player.x=100;
+  player.y=400;
+  player.vx=0;
+  player.vy=0;
+
+  cameraX=0;
+  won=false;
+  gameOver=false;
+
+  // TANAH
+  platforms.push({
+    x:0,y:520,w:1000,h:80
+  });
+
+  platforms.push({
+    x:1100,y:520,w:1000,h:80
+  });
+
+  platforms.push({
+    x:2200,y:520,w:1200,h:80
+  });
+
+  // PLATFORM BERBEDA SETIAP STAGE
+
+  if(stage===1){
+
+    platforms.push({x:300,y:420,w:150,h:25});
+    platforms.push({x:600,y:350,w:150,h:25});
+    platforms.push({x:850,y:420,w:150,h:25});
+
+    coins=[
+      {x:350,y:380},
+      {x:650,y:310},
+      {x:900,y:380},
+      {x:1250,y:450},
+      {x:1500,y:450},
+      {x:1800,y:450}
+    ];
+
+    enemies=[
+      {x:500,y:475,w:40,h:45,vx:2},
+      {x:1400,y:475,w:40,h:45,vx:2},
+      {x:2300,y:475,w:40,h:45,vx:2}
+    ];
+
+  }
+
+  if(stage===2){
+
+    platforms.push({x:250,y:430,w:130,h:25});
+    platforms.push({x:500,y:350,w:130,h:25});
+    platforms.push({x:750,y:280,w:130,h:25});
+
+    platforms.push({x:1250,y:400,w:130,h:25});
+    platforms.push({x:1500,y:320,w:130,h:25});
+    platforms.push({x:1750,y:400,w:130,h:25});
+
+    coins=[
+      {x:300,y:390},
+      {x:550,y:310},
+      {x:800,y:240},
+      {x:1300,y:360},
+      {x:1550,y:280},
+      {x:1800,y:360},
+      {x:2400,y:450},
+      {x:2700,y:450},
+      {x:3000,y:450}
+    ];
+
+    enemies=[
+      {x:450,y:475,w:40,h:45,vx:3},
+      {x:1000,y:475,w:40,h:45,vx:3},
+      {x:1400,y:475,w:40,h:45,vx:3},
+      {x:2000,y:475,w:40,h:45,vx:3},
+      {x:2500,y:475,w:40,h:45,vx:3}
+    ];
+
+  }
+
+  if(stage===3){
+
+    platforms.push({x:250,y:420,w:120,h:25});
+    platforms.push({x:450,y:330,w:120,h:25});
+    platforms.push({x:650,y:240,w:120,h:25});
+    platforms.push({x:850,y:330,w:120,h:25});
+
+    platforms.push({x:1250,y:400,w:120,h:25});
+    platforms.push({x:1450,y:300,w:120,h:25});
+    platforms.push({x:1650,y:200,w:120,h:25});
+
+    platforms.push({x:2250,y:400,w:120,h:25});
+    platforms.push({x:2450,y:300,w:120,h:25});
+    platforms.push({x:2650,y:200,w:120,h:25});
+    platforms.push({x:2900,y:300,w:120,h:25});
+
+    coins=[
+      {x:290,y:380},
+      {x:490,y:290},
+      {x:690,y:200},
+      {x:890,y:290},
+      {x:1290,y:360},
+      {x:1490,y:260},
+      {x:1690,y:160},
+      {x:2290,y:360},
+      {x:2490,y:260},
+      {x:2690,y:160},
+      {x:2940,y:260}
+    ];
+
+    enemies=[
+      {x:400,y:475,w:40,h:45,vx:3},
+      {x:800,y:475,w:40,h:45,vx:3},
+      {x:1300,y:475,w:40,h:45,vx:4},
+      {x:1800,y:475,w:40,h:45,vx:4},
+      {x:2300,y:475,w:40,h:45,vx:4},
+      {x:2700,y:475,w:40,h:45,vx:4}
+    ];
+
+  }
+
+  finishX=3200;
+}
+
+createStage();
+
+/* =========================
+   CONTROL
+========================= */
+
+function jump(){
+
+  if(player.grounded && !won && !gameOver){
+
+    player.vy=-player.jump;
+    player.grounded=false;
+
+  }
+}
+
+function buttonHold(id,key){
+
+  const b=document.getElementById(id);
+
+  b.addEventListener("touchstart",e=>{
+    e.preventDefault();
+    keys[key]=true;
+  });
+
+  b.addEventListener("touchend",e=>{
+    e.preventDefault();
+    keys[key]=false;
+  });
+
+  b.addEventListener("mousedown",()=>{
+    keys[key]=true;
+  });
+
+  b.addEventListener("mouseup",()=>{
+    keys[key]=false;
+  });
+
+  b.addEventListener("mouseleave",()=>{
+    keys[key]=false;
+  });
+}
+
+buttonHold("left","left");
+buttonHold("right","right");
+
+document.getElementById("jump").addEventListener("touchstart",e=>{
+  e.preventDefault();
+  jump();
+});
+
+document.getElementById("jump").addEventListener("mousedown",jump);
+
+/* =========================
+   COLLISION
+========================= */
+
+function collision(a,b){
+
+  return(
+    a.x<b.x+b.w &&
+    a.x+a.w>b.x &&
+    a.y<b.y+b.h &&
+    a.y+a.h>b.y
+  );
+
+}
+
+/* =========================
+   UPDATE
+========================= */
+
+function update(){
+
+  if(won || gameOver)return;
+
+  if(keys.left)
+    player.vx=-player.speed;
+
+  else if(keys.right)
+    player.vx=player.speed;
+
+  else
+    player.vx*=0.8;
+
+  player.vy+=0.6;
+
+  player.x+=player.vx;
+  player.y+=player.vy;
+
+  player.grounded=false;
+
+  // PLATFORM
+
+  for(const p of platforms){
+
+    if(
+      player.x+player.w>p.x &&
+      player.x<p.x+p.w &&
+      player.y+player.h<=p.y+15 &&
+      player.y+player.h+player.vy>=p.y
+    ){
+
+      player.y=p.y-player.h;
+      player.vy=0;
+      player.grounded=true;
+
+    }
+  }
+
+  // KOIN
+
+  for(let i=coins.length-1;i>=0;i--){
+
+    const c=coins[i];
+
+    const box={
+      x:c.x,
+      y:c.y,
+      w:25,
+      h:25
+    };
+
+    if(collision(player,box)){
+
+      coins.splice(i,1);
+      score+=10;
+
+    }
+  }
+
+  // MUSUH
+
+  for(const e of enemies){
+
+    e.x+=e.vx;
+
+    if(e.x<0 || e.x>finishX)
+      e.vx*=-1;
+
+    if(collision(player,e)){
+
+      if(
+        player.vy>0 &&
+        player.y+player.h<e.y+25
+      ){
+
+        e.y=1000;
+
+        player.vy=-9;
+
+        score+=20;
+
+      }else{
+
+        lives--;
+
+        if(lives<=0){
+
+          gameOver=true;
+
+        }else{
+
+          player.x=100;
+          player.y=400;
+          player.vx=0;
+          player.vy=0;
+
+        }
+      }
+    }
+  }
+
+  // JATUH
+
+  if(player.y>700){
+
+    lives--;
+
+    if(lives<=0){
+
+      gameOver=true;
+
+    }else{
+
+      player.x=100;
+      player.y=400;
+      player.vx=0;
+      player.vy=0;
+
+    }
+  }
+
+  // FINISH
+
+  if(player.x>=finishX){
+
+    won=true;
+
+  }
+
+  cameraX=player.x-300;
+
+  if(cameraX<0)
+    cameraX=0;
+
+  if(cameraX>finishX-700)
+    cameraX=finishX-700;
+}
+
+/* =========================
+   BACKGROUND
+========================= */
+
+function drawBackground(){
+
+  ctx.fillStyle="#72cfff";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // MATAHARI
+
+  ctx.fillStyle="#ffd83d";
+
+  ctx.beginPath();
+  ctx.arc(800,100,45,0,Math.PI*2);
+  ctx.fill();
+
+  // AWAN
+
+  ctx.fillStyle="white";
+
+  for(let x=-cameraX%500-500;x<1500;x+=500){
+
+    ctx.beginPath();
+
+    ctx.arc(x+100,130,25,0,Math.PI*2);
+    ctx.arc(x+130,120,35,0,Math.PI*2);
+    ctx.arc(x+165,135,25,0,Math.PI*2);
+
+    ctx.fill();
+  }
+
+  // GUNUNG
+
+  ctx.fillStyle="#72b96b";
+
+  for(
+    let x=-cameraX%600-600;
+    x<1600;
+    x+=600
+  ){
+
+    ctx.beginPath();
+
+    ctx.moveTo(x,520);
+    ctx.lineTo(x+300,230);
+    ctx.lineTo(x+600,520);
+
+    ctx.fill();
+
+  }
+}
+
+/* =========================
+   DRAW
+========================= */
+
+function draw(){
+
+  drawBackground();
+
+  ctx.save();
+
+  ctx.translate(-cameraX,0);
+
+  // PLATFORM
+
+  for(const p of platforms){
+
+    ctx.fillStyle="#8b572a";
+    ctx.fillRect(p.x,p.y,p.w,p.h);
+
+    ctx.fillStyle="#35a853";
+    ctx.fillRect(p.x,p.y,p.w,12);
+
+  }
+
+  // KOIN
+
+  for(const c of coins){
+
+    ctx.fillStyle="#ffd700";
+
+    ctx.beginPath();
+    ctx.arc(c.x+12,c.y+12,12,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle="#fff4a3";
+
+    ctx.beginPath();
+    ctx.arc(c.x+8,c.y+8,4,0,Math.PI*2);
+    ctx.fill();
+
+  }
+
+  // MUSUH
+
+  for(const e of enemies){
+
+    if(e.y>700)continue;
+
+    ctx.fillStyle="#e04444";
+
+    ctx.fillRect(
+      e.x,
+      e.y,
+      e.w,
+      e.h
+    );
+
+    ctx.fillStyle="white";
+
+    ctx.fillRect(e.x+7,e.y+8,8,8);
+    ctx.fillRect(e.x+25,e.y+8,8,8);
+
+    ctx.fillStyle="black";
+
+    ctx.fillRect(e.x+10,e.y+10,4,4);
+    ctx.fillRect(e.x+28,e.y+10,4,4);
+
+  }
+
+  // FINISH
+
+  ctx.fillStyle="#222";
+
+  ctx.fillRect(
+    finishX,
+    300,
+    10,
+    220
+  );
+
+  ctx.fillStyle="#ff3333";
+
+  ctx.beginPath();
+
+  ctx.moveTo(finishX+10,300);
+  ctx.lineTo(finishX+110,330);
+  ctx.lineTo(finishX+10,360);
+
+  ctx.fill();
+
+  // PLAYER
+
+  ctx.fillStyle="#3155ff";
+
+  ctx.fillRect(
+    player.x,
+    player.y,
+    player.w,
+    player.h
+  );
+
+  ctx.fillStyle="#ffd0a0";
+
+  ctx.fillRect(
+    player.x+7,
+    player.y-15,
+    26,
+    22
+  );
+
+  ctx.fillStyle="black";
+
+  ctx.fillRect(
+    player.x+13,
+    player.y-8,
+    4,
+    4
+  );
+
+  ctx.fillRect(
+    player.x+25,
+    player.y-8,
+    4,
+    4
+  );
+
+  ctx.restore();
+
+  // UI
+
+  ctx.fillStyle="white";
+  ctx.font="24px Arial";
+
+  ctx.fillText(
+    "⭐ "+score,
+    20,
+    35
+  );
+
+  ctx.fillText(
+    "❤️ "+lives,
+    20,
+    65
+  );
+
+  ctx.fillText(
+    "STAGE "+stage,
+    20,
+    95
+  );
+
+  // MENANG
+
+  if(won){
+
+    ctx.fillStyle="rgba(0,0,0,.7)";
+    ctx.fillRect(
+      0,0,
+      canvas.width,
+      canvas.height
+    );
+
+    ctx.fillStyle="white";
+    ctx.textAlign="center";
+
+    ctx.font="50px Arial";
+
+    if(stage<3){
+
+      ctx.fillText(
+        "🎉 STAGE CLEAR!",
+        canvas.width/2,
+        230
+      );
+
+      ctx.font="25px Arial";
+
+      ctx.fillText(
+        "Tekan tombol STAGE BERIKUTNYA",
+        canvas.width/2,
+        280
+      );
+
+    }else{
+
+      ctx.fillText(
+        "🏆 TAMAT!",
+        canvas.width/2,
+        230
+      );
+
+      ctx.font="25px Arial";
+
+      ctx.fillText(
+        "Kamu menyelesaikan semua stage!",
+        canvas.width/2,
+        280
+      );
+
+    }
+
+    ctx.textAlign="left";
+  }
+
+  // GAME OVER
+
+  if(gameOver){
+
+    ctx.fillStyle="rgba(0,0,0,.75)";
+
+    ctx.fillRect(
+      0,0,
+      canvas.width,
+      canvas.height
+    );
+
+    ctx.fillStyle="white";
+
+    ctx.textAlign="center";
+
+    ctx.font="50px Arial";
+
+    ctx.fillText(
+      "GAME OVER",
+      canvas.width/2,
+      250
+    );
+
+    ctx.font="25px Arial";
+
+    ctx.fillText(
+      "Tekan RESTART",
+      canvas.width/2,
+      300
+    );
+
+    ctx.textAlign="left";
+  }
+}
+
+/* =========================
+   TOMBOL MENU
+========================= */
+
+function restart(){
+
+  score=0;
+  lives=3;
+  stage=1;
+
+  createStage();
+
+}
+
+function nextStage(){
+
+  if(stage<3){
+
+    stage++;
+
+    createStage();
+
+  }else{
+
+    restart();
+
+  }
+}
+
+const restartButton=document.createElement("button");
+
+restartButton.innerText="🔄 RESTART";
+
+restartButton.style.position="fixed";
+restartButton.style.top="110px";
+restartButton.style.right="20px";
+restartButton.style.width="120px";
+restartButton.style.height="45px";
+restartButton.style.borderRadius="12px";
+restartButton.style.fontSize="15px";
+restartButton.style.background="rgba(0,0,0,.55)";
+
+restartButton.onclick=restart;
+
+document.body.appendChild(restartButton);
+
+const nextButton=document.createElement("button");
+
+nextButton.innerText="STAGE BERIKUTNYA ➡️";
+
+nextButton.style.position="fixed";
+nextButton.style.top="50%";
+nextButton.style.left="50%";
+nextButton.style.transform="translate(-50%,-50%)";
+nextButton.style.width="240px";
+nextButton.style.height="60px";
+nextButton.style.borderRadius="15px";
+nextButton.style.fontSize="17px";
+nextButton.style.background="#35a853";
+nextButton.style.display="none";
+
+nextButton.onclick=()=>{
+
+  nextButton.style.display="none";
+
+  nextStage();
+
+};
+
+document.body.appendChild(nextButton);
+
+/* CEK MENANG UNTUK TOMBOL STAGE */
+
+setInterval(()=>{
+
+  if(won && stage<3)
+    nextButton.style.display="block";
+
+  else
+    nextButton.style.display="none";
+
+},100);
+
+/* =========================
+   KEYBOARD
+========================= */
+
+document.addEventListener("keydown",e=>{
+
+  if(e.key==="ArrowLeft")
+    keys.left=true;
+
+  if(e.key==="ArrowRight")
+    keys.right=true;
+
+  if(
+    e.key==="ArrowUp" ||
+    e.key===" "
+  )
+    jump();
+
+});
+
+document.addEventListener("keyup",e=>{
+
+  if(e.key==="ArrowLeft")
+    keys.left=false;
+
+  if(e.key==="ArrowRight")
+    keys.right=false;
+
+});
+
+/* =========================
+   GAME LOOP
+========================= */
+
+function loop(){
+
+  update();
+  draw();
+
+  requestAnimationFrame(loop);
+
+}
+
+loop();
+
+</script>
+
+</body>
+  </html>
